@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Penugasan & Penomoran Surat</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- SweetAlert2 untuk Notifikasi Modern -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center">
+
+    <!-- BAGIAN 1: KONTEN APLIKASI UTAMA -->
+    <div id="mainAppContainer" class="w-full h-full hidden flex-col relative">
+        <iframe src="https://script.google.com/macros/s/AKfycbwxvKrgR5yGa05VFtI97rtNQnHBTZWq4xBI_aK1z_-Kz0_qGsEaz3QRJM_L7rYC-Nch/exec" 
+                class="w-full h-full border-none" 
+                title="Sistem Penugasan"></iframe>
+
+        <!-- WIDGET CHATBOT HIBRIDA (INTERNAL + AI) -->
+        <div class="absolute bottom-6 right-6 z-50">
+            <!-- Tombol Gelembung Chat -->
+            <button onclick="toggleChatbox()" id="chatToggleBtn" class="bg-blue-600 hover:bg-blue-500 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition transform hover:scale-105 cursor-pointer border border-blue-400/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+            </button>
+
+            <!-- Jendela Kotak Percakapan Chatbot -->
+            <div id="chatWindow" class="hidden flex flex-col w-80 sm:w-96 h-[520px] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-lg absolute bottom-16 right-0 transition-all duration-300">
+                <!-- Header Chatbot -->
+                <div class="bg-slate-800 px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <div>
+                            <h3 class="text-xs font-bold text-white">Asisten OSDM Cerdas (Hibrida AI)</h3>
+                            <p class="text-[10px] text-slate-400">Database Internal & Asisten Pintar</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleChatbox()" class="text-slate-400 hover:text-white cursor-pointer text-sm">✕</button>
+                </div>
+
+                <!-- Area Riwayat Pesan -->
+                <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+                    <div class="flex items-start space-x-2">
+                        <div class="bg-blue-600 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow">
+                            Halo! Saya bisa membantu Anda mengecek data pegawai di sistem (ketik namanya) atau berdiskusi seputar kendala teknis. Ada yang bisa dibantu?
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tombol Pintasan Cepat (Quick Reply Chips) -->
+                <div class="px-3 py-2 bg-slate-800/40 border-t border-slate-800 flex flex-wrap gap-1.5">
+                    <button onclick="sendQuickAction('cari')" class="bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white text-[10px] px-2.5 py-1 rounded-lg border border-slate-700 transition cursor-pointer">🔍 Cari Pegawai</button>
+                    <button onclick="sendQuickAction('gagal')" class="bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white text-[10px] px-2.5 py-1 rounded-lg border border-slate-700 transition cursor-pointer">⚠️ Gagal Input</button>
+                    <button onclick="sendQuickAction('sikd')" class="bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white text-[10px] px-2.5 py-1 rounded-lg border border-slate-700 transition cursor-pointer">📄 Format SIKD</button>
+                    <button onclick="sendQuickAction('status')" class="bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white text-[10px] px-2.5 py-1 rounded-lg border border-slate-700 transition cursor-pointer">📌 Status Surat</button>
+                </div>
+
+                <!-- Kolom Input Pesan -->
+                <div class="p-3 bg-slate-800/80 border-t border-slate-700">
+                    <form onsubmit="handleChatSubmit(event)" class="flex space-x-2">
+                        <input type="text" id="chatInput" placeholder="Ketik nama pegawai atau pertanyaan..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500" autocomplete="off">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer">
+                            Kirim
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BAGIAN 2: HALAMAN HITUNG MUNDUR -->
+    <div id="countdownSection" class="max-w-md w-full space-y-6 text-center p-6 hidden">
+        <div class="space-y-2">
+            <h1 class="text-4xl font-extrabold tracking-tight text-white">Segera Hadir</h1>
+            <p class="text-sm text-slate-400">Website kami sedang dalam tahap pemeliharaan. Silakan kembali lagi nanti!</p>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-6 shadow-xl backdrop-blur">
+            <p class="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-3">Pemeliharaan akan berakhir dalam:</p>
+            <div id="countdown" class="text-2xl font-mono font-bold text-white tracking-widest">
+                Memuat waktu...
+            </div>
+        </div>
+        <div>
+            <button onclick="logoutAdmin()" class="text-xs text-slate-500 hover:text-slate-300 underline cursor-pointer">Kunci Kembali Halaman</button>
+        </div>
+    </div>
+
+    <!-- BAGIAN 3: FORM LOGIN PASSWORD -->
+    <div id="loginSection" class="max-w-sm w-full bg-slate-800/80 border border-slate-700 rounded-2xl p-6 shadow-2xl backdrop-blur space-y-4 m-auto">
+        <div class="space-y-1 text-center">
+            <div class="bg-blue-600/20 w-12 h-12 mx-auto rounded-xl flex items-center justify-center border border-blue-500/30 text-blue-400 mb-2">
+                <span class="text-lg">🔑</span>
+            </div>
+            <h2 class="text-base font-bold text-white">Akses Terbatas</h2>
+            <p class="text-xs text-slate-400">Masukkan kata sandi untuk melihat halaman.</p>
+        </div>
+        <form onsubmit="handleLogin(event)" class="space-y-3">
+            <input type="password" id="adminPassword" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none text-center tracking-widest" placeholder="Kata Sandi..." required autocomplete="current-password">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl shadow transition cursor-pointer text-xs uppercase tracking-wider">
+                Masuk
+            </button>
+        </form>
+    </div>
+
+    <!-- Skrip Logika Hibrida Terintegrasi -->
+    <script>
+        const PASSWORD_RAHASIA = "osdm321";
+        const IDLE_TIMEOUT_LIMIT = 15 * 60 * 1000; 
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx0em5MMHVQBWgO8QR6OxzlJ9PsJYyzjFF4mUArm0IILXU-PidZL6ZANaoz-v9F4YaG/exec";
+        let idleTimer;
+        let waitingForPegawaiQuery = false;
+
+        window.onload = function() {
+            if (localStorage.getItem("isLoggedIn") === "true") {
+                cekWaktuDanTampilkan();
+                mulaiPengingatIdle();
+            }
+        };
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const inputPwd = document.getElementById("adminPassword").value;
+
+            if (inputPwd === PASSWORD_RAHASIA) {
+                localStorage.setItem("isLoggedIn", "true");
+                cekWaktuDanTampilkan();
+                mulaiPengingatIdle();
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal!',
+                    text: 'Kata sandi salah, silakan coba lagi.',
+                    background: '#1e293b',
+                    color: '#f8fafc',
+                    confirmButtonColor: '#2563eb'
+                });
+                document.getElementById("adminPassword").value = "";
+            }
+        }
+
+        function cekWaktuDanTampilkan() {
+            document.getElementById("loginSection").classList.add("hidden");
+            
+            const countDownDate = new Date("2026-09-14T08:00:00+07:00").getTime();
+            const now = new Date().getTime();
+            const distance = countDownDate - now;
+
+            if (distance < 0) {
+                tampilkanAplikasiUtama();
+            } else {
+                document.getElementById("countdownSection").classList.remove("hidden");
+                mulaiHitungMundur(countDownDate);
+            }
+        }
+
+        function mulaiHitungMundur(countDownDate) {
+            const x = setInterval(function() {
+                const now = new Date().getTime();
+                const distance = countDownDate - now;
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                if (distance < 0) {
+                    clearInterval(x);
+                    document.getElementById("countdown").innerHTML = "MEMBUKA APLIKASI...";
+                    setTimeout(() => {
+                        tampilkanAplikasiUtama();
+                    }, 1000);
+                } else {
+                    let displayTime = "";
+                    if (days > 0) displayTime += `${days} hari, `;
+                    displayTime += `${hours} jam, ${minutes} menit, ${seconds} detik`;
+                    document.getElementById("countdown").innerHTML = displayTime;
+                }
+            }, 1000);
+        }
+
+        function tampilkanAplikasiUtama() {
+            document.getElementById("countdownSection").classList.add("hidden");
+            const container = document.getElementById("mainAppContainer");
+            container.classList.remove("hidden");
+            container.classList.add("flex");
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem("isLoggedIn");
+            location.reload();
+        }
+
+        function mulaiPengingatIdle() {
+            const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+            function resetIdleTimer() {
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(terdeteksiIdle, IDLE_TIMEOUT_LIMIT);
+            }
+            events.forEach(event => {
+                window.addEventListener(event, resetIdleTimer, true);
+            });
+            resetIdleTimer();
+        }
+
+        function terdeteksiIdle() {
+            localStorage.removeItem("isLoggedIn");
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sesi Berakhir',
+                text: 'Anda tidak aktif dalam waktu yang lama. Silakan masuk kembali.',
+                background: '#1e293b',
+                color: '#f8fafc',
+                confirmButtonColor: '#2563eb',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(() => {
+                location.reload();
+            });
+        }
+
+        function toggleChatbox() {
+            const chatWindow = document.getElementById("chatWindow");
+            chatWindow.classList.toggle("hidden");
+        }
+
+        function sendQuickAction(type) {
+            const chatMessages = document.getElementById("chatMessages");
+            let userLabel = "";
+            let botReply = "";
+
+            if (type === 'cari') {
+                userLabel = "🔍 Cari Data Pegawai";
+                botReply = "Silakan ketik <b>Nama atau NIP pegawai</b> yang ingin Anda cari di database:";
+                waitingForPegawaiQuery = true;
+            } else if (type === 'gagal') {
+        userLabel = "⚠️ Kendala Input Data";
+        let botReply = "Halo Sobat OSDM! Gagal input biasanya terjadi karena pegawai tersebut masih memiliki penugasan aktif (status 'Proses') pada rentang tanggal yang bersinggungan di tahun yang sama.<br><br>💡 <b>Solusi:</b> Silakan ubah status penugasan lama menjadi 'Selesai' terlebih dahulu melalui menu Edit Data, atau sesuaikan rentang tanggal penugasan barunya.";
+        
+        chatMessages.innerHTML += `
+            <div class="flex justify-end">
+                <div class="bg-slate-700 text-white rounded-xl rounded-tr-none p-3 max-w-[80%] shadow">${userLabel}</div>
+            </div>
+            <div class="flex items-start space-x-2">
+                <div class="bg-blue-600 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow">${botReply}</div>
+            </div>
+        `;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return;
+            } else if (type === 'sikd') {
+                userLabel = "📄 Format SIKD";
+                askGeminiChat("Jelaskan bagaimana standar kompatibilitas file PDF agar bisa diunggah dengan lancar ke sistem SIKD Kementerian Sosial.", chatMessages);
+                return;
+            } else if (type === 'status') {
+                userLabel = "📌 Status Surat";
+                botReply = "Status <b>Proses/Draf</b> = sedang dikerjakan.<br>Status <b>Sudah TTE</b> = sudah ditandatangani elektronik.<br>Status <b>Selesai</b> = masa tugas berakhir.";
+            }
+
+            if (botReply) {
+                chatMessages.innerHTML += `
+                    <div class="flex justify-end">
+                        <div class="bg-slate-700 text-white rounded-xl rounded-tr-none p-3 max-w-[80%] shadow">
+                            ${userLabel}
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-2">
+                        <div class="bg-blue-600 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow">
+                            ${botReply}
+                        </div>
+                    </div>
+                `;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function handleChatSubmit(e) {
+            e.preventDefault();
+            const inputField = document.getElementById("chatInput");
+            const userText = inputField.value.trim();
+            if (!userText) return;
+
+            const chatMessages = document.getElementById("chatMessages");
+
+            chatMessages.innerHTML += `
+                <div class="flex justify-end">
+                    <div class="bg-slate-700 text-white rounded-xl rounded-tr-none p-3 max-w-[80%] shadow">
+                        ${escapeHtml(userText)}
+                    </div>
+                </div>
+            `;
+            inputField.value = "";
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            if (waitingForPegawaiQuery) {
+                waitingForPegawaiQuery = false;
+                searchDataFromSpreadsheet(userText, chatMessages);
+                return;
+            }
+
+            const lower = userText.toLowerCase();
+            const isDatabaseQuery = (lower.includes("cari") || lower.includes("cek") || /^\d{15,18}$/.test(userText)) && 
+                                     !lower.includes("kenapa") && !lower.includes("bagaimana") && !lower.includes("mengapa");
+
+            if (isDatabaseQuery || (userText.split(" ").length <= 3 && !lower.includes("apa") && !lower.includes("sih") && !lower.includes("pdf") && !lower.includes("sikd") && !lower.includes("petugas"))) {
+                searchDataFromSpreadsheet(userText, chatMessages);
+            } else {
+                askGeminiChat(userText, chatMessages);
+            }
+        }
+
+        function searchDataFromSpreadsheet(keyword, chatContainer) {
+            const loadingId = "loading_" + new Date().getTime();
+            chatContainer.innerHTML += `
+                <div id="${loadingId}" class="flex items-start space-x-2">
+                    <div class="bg-blue-600/60 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow animate-pulse">
+                        Mengecek data internal spreadsheet...
+                    </div>
+                </div>
+            `;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            const endpointUrl = WEB_APP_URL + "?action=searchChat&q=" + encodeURIComponent(keyword);
+
+            fetch(endpointUrl)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById(loadingId).remove();
+                    let replyHtml = "";
+                    if (data.status === 'success' && data.data.length > 0) {
+                        replyHtml = `Hasil Data Internal untuk <i>"${escapeHtml(keyword)}"</i>:<br><br>`;
+                        data.data.forEach(item => {
+                            replyHtml += `• <b>${item.nama}</b> (NIP: ${item.nip})<br>` +
+                                         `&nbsp;&nbsp;Jabatan: ${item.jabatanTugas} di ${item.satuanTugas}<br>` +
+                                         `&nbsp;&nbsp;Masa Tugas: ${item.tglMulai} s/d ${item.tglBerakhir}<br>` +
+                                         `&nbsp;&nbsp;No. SK: ${item.noSK} | Status: <b>${item.status}</b><br>` +
+                                         `&nbsp;&nbsp;👤 <b>Petugas Input:</b> ${item.petugas}<br>` +
+                                         `&nbsp;&nbsp;<span style="color: #fde047;">${item.diagnosa}</span><br><br>`;
+                        });
+                    } else {
+                        askGeminiChat(keyword, chatContainer);
+                        return;
+                    }
+
+                    chatContainer.innerHTML += `
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-blue-600 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow">
+                                ${replyHtml}
+                            </div>
+                        </div>
+                    `;
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                })
+                .catch(err => {
+                    document.getElementById(loadingId).remove();
+                    askGeminiChat(keyword, chatContainer);
+                });
+        }
+
+        function askGeminiChat(query, chatContainer) {
+            const loadingId = "loading_" + new Date().getTime();
+            chatContainer.innerHTML += `
+                <div id="${loadingId}" class="flex items-start space-x-2">
+                    <div class="bg-blue-600/60 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow animate-pulse">
+                        Asisten AI sedang menyusun jawaban...
+                    </div>
+                </div>
+            `;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            const endpointUrl = WEB_APP_URL + "?action=askAI&prompt=" + encodeURIComponent(query);
+
+            fetch(endpointUrl)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById(loadingId).remove();
+                    
+                    let replyText = "";
+                    if (typeof data === 'string') {
+                        replyText = data;
+                    } else if (data.reply) {
+                        replyText = data.reply;
+                    } else if (data.data) {
+                        replyText = data.data;
+                    } else {
+                        replyText = "Halo Pak Toni! Pastikan parameter data dan ketentuan administrasi Biro OSDM sudah sesuai.";
+                    }
+
+                    chatContainer.innerHTML += `
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-blue-600 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow">
+                                ${escapeHtml(replyText).replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+                    `;
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                })
+                .catch(err => {
+                    document.getElementById(loadingId).remove();
+                    chatContainer.innerHTML += `
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-red-600 text-white rounded-xl rounded-tl-none p-3 max-w-[80%] shadow">
+                                Gagal terhubung ke server AI.
+                            </div>
+                        </div>
+                    `;
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                });
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
+</body>
+</html>
